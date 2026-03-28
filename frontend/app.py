@@ -203,6 +203,19 @@ if not st.session_state.task_id:
     # Landing Page State
     st.markdown("<h1>BrandSync Studio</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Automated Multi-Modal Video Ad Generation using Google's State-of-the-Art AI.</p>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background: rgba(0, 212, 255, 0.05); border: 1px solid rgba(0, 212, 255, 0.2); border-left: 4px solid #00D4FF; border-radius: 8px; padding: 24px; margin-bottom: 2rem;">
+        <h3 style="color: #00D4FF; font-weight: 600; margin-top: 0; margin-bottom: 1rem;">About BrandSync</h3>
+        <p style="color: #A0A0B0; line-height: 1.6; margin-bottom: 1rem;">
+            BrandSync was built to democratize high-quality video ad creation. We know that businesses often struggle to create engaging, polished marketing material due to cost and time constraints.
+        </p>
+        <p style="color: #A0A0B0; line-height: 1.6; margin-bottom: 0;">
+            With just a single website URL, BrandSync leverages <b>Google Gemini</b> to analyze a brand's exact identity, tone, and visual style. It then orchestrates state-of-the-art models including <b>Nano Banana</b> (scraping), <b>Google Veo</b> (hyper-realistic video generation), and <b>Google Lyria</b> (professional audio synthesis) to generate a complete, ready-to-publish video campaign in minutes!
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.info("👈 Enter a Business URL in the sidebar to generate your first ad!")
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -232,7 +245,6 @@ if not st.session_state.task_id:
         </div>
         """, unsafe_allow_html=True)
         
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
     # st.info("👈 Enter a Business URL in the sidebar to generate your first ad!")
 
 else:
