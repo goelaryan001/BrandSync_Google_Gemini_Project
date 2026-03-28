@@ -28,14 +28,15 @@ async def process_task(task_id: str, data: dict):
     vibe = style_contract.get("audio_vibe", "Electronic")
     narrative = style_contract.get("tts_narration", "Welcome.")
     visual_style = style_contract.get("visual_style", "Cinematic")
+    hero_product = style_contract.get("hero_product", "Product")
 
     # Define parallel tasks
     async def video_pipeline():
         images = await generate_images_mock(prompts)
         # Select best image (simulated Brain selection is just picking the first)
         best_image = images[0] if images else "tmp/mock_image_0.jpg"
-        video_path = await generate_video_mock(best_image, visual_style)
-        return video_path
+        video_path = await generate_video_mock(best_image, visual_style, hero_product)
+        return video_path, best_image
 
     # Run pipelines concurrently
     video_task = asyncio.create_task(video_pipeline())
@@ -43,14 +44,14 @@ async def process_task(task_id: str, data: dict):
     tts_task = asyncio.create_task(generate_tts_mock(narrative))
 
     logger.info("Orchestrator: Waiting for parallel generation to finish...")
-    video_path, audio_path, tts_path = await asyncio.gather(video_task, audio_task, tts_task)
+    (video_path, image_path), audio_path, tts_path = await asyncio.gather(video_task, audio_task, tts_task)
     logger.info("Orchestrator: All GENERATION complete. Starting Synthesis.")
 
     db_client.update_data(f"/tasks/{task_id}", {"status": "synthesizing"})
 
     # Trigger Synthesizer
     try:
-        final_video = await synthesize_ad(task_id, video_path, audio_path, tts_path)
+        final_video = await synthesize_ad(task_id, video_path, image_path, audio_path, tts_path)
         logger.info(f"Orchestrator: Synthesis complete: {final_video}")
         db_client.update_data(f"/tasks/{task_id}", {
             "status": "completed",

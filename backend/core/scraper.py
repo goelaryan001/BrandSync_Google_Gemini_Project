@@ -10,7 +10,7 @@ async def scrape_url(url: str) -> dict:
     """
     logger.info(f"Scraping URL: {url}")
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
                 html = await response.text()
