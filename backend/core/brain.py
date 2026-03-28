@@ -25,8 +25,8 @@ class StyleContract(BaseModel):
     prompts_for_images: List[str] = Field(description="3 distinct prompts to generate candidate hero images for the video. MUST focus on the hero_product.", max_length=3, min_length=3)
     audio_bpm: int = Field(description="Suggested BPM (Beats Per Minute) for the soundtrack (e.g., 90 for calm, 120 for upbeat).")
     audio_vibe: str = Field(description="A prompt describing the musical soundtrack vibe for the generation model.")
-    tts_narration: str = Field(description="The script for the voice-over narration. MUST be between 60-75 words to fit a 20s ad.")
-    ad_punchlines: List[str] = Field(description="3 short, punchy marketing phrases (exactly 2-3 words each) to be overlayed as text during the video (e.g. 'Fresh Local Ingredients', 'Order Now').", max_length=3, min_length=3)
+    tts_narration: str = Field(description="The script for the voice-over narration. MUST be exactly 35 words to fit a 20s ad.")
+    ad_punchlines: List[str] = Field(description="3 short, punchy marketing phrases (exactly 2-3 words each) to be overlayed as text during the video.", max_length=3, min_length=3)
 
 def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "") -> dict:
     """
@@ -56,7 +56,7 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
         2. VISUAL ACCURACY & BRANDING: All 3 'prompts_for_images' MUST feature this 'hero_product'. 
            - One image prompt MUST be a clean 'Hero shot' that includes 'Integrated professional [Brand Name] logo and minimalist typography'.
         3. DYNAMIC TEXT: Create 3 'ad_punchlines' that capture the brand's core value proposition in exactly 2-3 words each.
-        4. PRODUCTION TIMINGS: We are building a **20-second Video Ad**. The 'tts_narration' MUST be between 60-75 words long.
+        4. PRODUCTION TIMINGS: We are building a **20-second Video Ad**. The 'tts_narration' MUST be exactly 35 words long. NO MORE.
         
         Input Website Data:
         URL: {scraped_data.get('url')}
@@ -96,6 +96,6 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
             ],
             "audio_bpm": 110,
             "audio_vibe": "Upbeat, modern corporate electronic music.",
-            "tts_narration": "Welcome to our brand. We are excited to show you what we have built. Discover the future of innovation with our latest product lineup today.",
+            "tts_narration": "Experience the future of innovation with our quality products. From sleek engineering to limitless potential, we redefine what is possible every single day. See why we are the top standard in our global industry.",
             "ad_punchlines": ["Innovation First", "Sleek Engineering", "Limitless Potential"]
         }

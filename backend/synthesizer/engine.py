@@ -2,48 +2,56 @@ import logging
 import asyncio
 from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip, ImageClip, CompositeVideoClip, concatenate_videoclips
 import numpy as np
+from typing import List
 
 logger = logging.getLogger(__name__)
 
-async def synthesize_ad(task_id: str, video_path: str, image_path: str, audio_path: str, tts_path: str, overlay_paths: list) -> str:
+async def synthesize_ad(task_id: str, video_path: str, image_paths: List[str], audio_path: str, tts_path: str, overlay_paths: List[str]) -> str:
     """
-    Professional Sequential Ad: 12s Motion -> 8s Hero Reveal + Dynamic Text Overlays.
+    Cinematic Collage Ad (20s): 8s Motion -> 8s Slideshow (2 images) -> 4s Hero Closer.
     """
-    logger.info("Synthesizer: Starting professional 20s Sequence Reveal...")
+    logger.info(f"Synthesizer: Starting 20s Cinematic Collage for {task_id}...")
     output_path = f"tmp/final_synthetic_ad_{task_id}.mp4"
 
     def merge_media():
         try:
-            # 1. Load Components
-            bg_image = ImageClip(image_path, duration=8).resized(width=1280)
-            motion_clip_raw = VideoFileClip(video_path).resized(width=1280)
+            # 1. Load Primary Components
+            motion_clip = VideoFileClip(video_path).resized(width=1280).with_duration(8)
             bgm = AudioFileClip(audio_path)
             tts = AudioFileClip(tts_path)
 
-            # 2. Sequence Assembly (12s Motion | 8s Image)
-            # Loop motion clip to exactly 12 seconds
-            loop_count = int(np.ceil(12 / motion_clip_raw.duration))
-            motion_video = concatenate_videoclips([motion_clip_raw] * loop_count).with_duration(12)
+            # 2. Image Selection (image_paths[0] is typically the Hero/Logo closer)
+            hero_path = image_paths[0] if len(image_paths) > 0 else "tmp/mock_image_0.jpg"
+            img2_path = image_paths[1] if len(image_paths) > 1 else hero_path
+            img3_path = image_paths[2] if len(image_paths) > 2 else hero_path
+
+            # 3. Sequence Assembly
+            # Section 1: Motion (0-8s)
+            section1 = motion_clip.with_start(0)
             
-            # The Hero image starts at 12s and lasts until 20s
-            hero_reval = bg_image.with_start(12).with_duration(8).with_position("center")
+            # Section 2: Slideshow Build (8-16s)
+            slide1 = ImageClip(img2_path, duration=4).resized(width=1280).with_start(8)
+            slide2 = ImageClip(img3_path, duration=4).resized(width=1280).with_start(12)
             
-            # 3. Dynamic Text Overlays (Slideshow effect)
+            # Section 3: Branded Hero Closer (16-20s)
+            closer = ImageClip(hero_path, duration=4).resized(width=1280).with_start(16)
+            
+            # 4. Dynamic Text Overlays
             text_layers = []
-            timings = [(1, 4), (5, 8), (9, 12)] # Start, End for each punchline
+            # Timings: 1-4s (Video), 5-8s (Video), 9-14s (Slideshow)
+            timings = [(1, 4), (5, 8), (9, 14)] 
             for i, path in enumerate(overlay_paths[:3]):
                 start, end = timings[i]
                 txt = ImageClip(path).with_start(start).with_duration(end - start).with_position("center")
                 text_layers.append(txt)
 
-            # 4. Composite Video
-            # Base logic: [Motion Video at start, Hero Reveal at 12s] + Text layers
+            # 5. Composite Final Clip
             final_video_clip = CompositeVideoClip(
-                [motion_video] + [hero_reval] + text_layers,
+                [section1, slide1, slide2, closer] + text_layers,
                 size=(1280, 720)
             ).with_duration(20)
 
-            # 5. Audio Mixing
+            # 6. Audio Mixing
             bgm = bgm.with_volume_scaled(0.15)
             tts = tts.with_start(1.0)
             final_audio = CompositeAudioClip([bgm, tts])
@@ -51,7 +59,7 @@ async def synthesize_ad(task_id: str, video_path: str, image_path: str, audio_pa
             if final_audio.duration > 20:
                 final_audio = final_audio.subclipped(0, 20)
             
-            # 6. Final Export
+            # 7. Final Export
             final_video = final_video_clip.with_audio(final_audio)
             final_video.write_videofile(
                 output_path, 
@@ -62,8 +70,10 @@ async def synthesize_ad(task_id: str, video_path: str, image_path: str, audio_pa
             )
             
             # Cleanup
-            bg_image.close()
-            motion_clip_raw.close()
+            motion_clip.close()
+            slide1.close()
+            slide2.close()
+            closer.close()
             bgm.close()
             tts.close()
             for tx in text_layers: tx.close()
@@ -74,6 +84,6 @@ async def synthesize_ad(task_id: str, video_path: str, image_path: str, audio_pa
             raise e
 
     await asyncio.to_thread(merge_media)
-    logger.info(f"Synthesizer: Sequence Reveal finished {output_path}")
+    logger.info(f"Synthesizer Result: {output_path}")
 
     return output_path

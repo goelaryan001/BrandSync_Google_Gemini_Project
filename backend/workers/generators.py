@@ -138,7 +138,7 @@ async def generate_video_mock(image_path: str, style: str, hero_product: str) ->
     return filepath
 
 async def generate_music_mock(bpm: int, vibe: str) -> str:
-    """Generates a real synced soundtrack using Lyria 3."""
+    """Generates a professional instrumental soundtrack using Lyria 3."""
     logger.info(f"Lyria 3: Generating music ({bpm} BPM, {vibe})...")
     filepath = "tmp/mock_lyria_audio.mp3"
     
@@ -146,23 +146,29 @@ async def generate_music_mock(bpm: int, vibe: str) -> str:
         api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
         
-        prompt = f"STRICTLY INSTRUMENTAL ONLY, No singers, No human voices, No vocals, Instrumental background music only, happy corporate music, {bpm} BPM, {vibe}"
+        # We simplify the prompt to focus on what we WANT (instrumental textures) 
+        # to avoid triggering the safety filters with words like 'vocals' or 'singers'.
+        prompt = f"Purely instrumental background music, {vibe}, {bpm} BPM, high-quality corporate acoustic textures."
+        
         response = await asyncio.to_thread(
             client.models.generate_content,
             model='lyria-3-pro-preview',
             contents=prompt
         )
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, 'inline_data') and getattr(part, 'inline_data', None):
-                audio_bytes = part.inline_data.data
-                with open(filepath, "wb") as f:
-                    f.write(audio_bytes)
-                logger.info(f"Lyria 3: Done. Saved to {filepath}")
-                return filepath
+        
+        # Robust part extraction for Lyria's multimodal response
+        if response.candidates and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'inline_data') and part.inline_data:
+                    audio_bytes = part.inline_data.data
+                    with open(filepath, "wb") as f:
+                        f.write(audio_bytes)
+                    logger.info(f"Lyria 3: Success! Music saved to {filepath}")
+                    return filepath
                 
-        raise Exception("Lyria returned successfully but no audio inline_data was found.")
+        raise Exception("Lyria returned successfully but no audio data was found in response parts.")
     except Exception as e:
-        logger.error(f"Lyria 3 failed to create audio: {e}. Falling back to ambient pad.")
+        logger.error(f"Lyria 3: Generation failed ({e}). Falling back to ambient pad.")
 
     # Only fall back to ambient pad if Lyria 3 totally breaks
     try:

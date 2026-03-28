@@ -36,10 +36,10 @@ async def process_task(task_id: str, data: dict):
     # Define parallel tasks
     async def video_pipeline():
         images = await generate_images_mock(prompts)
-        # Select best image (simulated Brain selection is just picking the first)
+        # We now keep ALL images for the slideshow collage
         best_image = images[0] if images else "tmp/mock_image_0.jpg"
         video_path = await generate_video_mock(best_image, visual_style, hero_product)
-        return video_path, best_image
+        return video_path, images or [best_image]
 
     # Run pipelines concurrently
     video_task = asyncio.create_task(video_pipeline())
@@ -56,7 +56,7 @@ async def process_task(task_id: str, data: dict):
     punchline_task = asyncio.create_task(punchline_pipeline())
 
     logger.info("Orchestrator: Waiting for parallel generation to finish...")
-    (video_path, image_path), audio_path, tts_path, overlay_paths = await asyncio.gather(
+    (video_path, image_paths), audio_path, tts_path, overlay_paths = await asyncio.gather(
         video_task, audio_task, tts_task, punchline_task
     )
     logger.info("Orchestrator: All GENERATION complete. Starting Synthesis.")
@@ -65,7 +65,7 @@ async def process_task(task_id: str, data: dict):
 
     # Trigger Synthesizer
     try:
-        final_video = await synthesize_ad(task_id, video_path, image_path, audio_path, tts_path, overlay_paths)
+        final_video = await synthesize_ad(task_id, video_path, image_paths, audio_path, tts_path, overlay_paths)
         logger.info(f"Orchestrator: Synthesis complete: {final_video}")
         db_client.update_data(f"/tasks/{task_id}", {
             "status": "completed",
