@@ -1,0 +1,1 @@
+# BrandSync_Google_Gemini_Project
