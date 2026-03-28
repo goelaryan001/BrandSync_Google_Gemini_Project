@@ -1,6 +1,7 @@
 import logging
 import asyncio
-from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip, ImageClip, CompositeVideoClip
+from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip, ImageClip, CompositeVideoClip, concatenate_videoclips
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +21,13 @@ async def synthesize_ad(task_id: str, video_path: str, image_path: str, audio_pa
             bgm = AudioFileClip(audio_path)
             tts = AudioFileClip(tts_path)
 
-            # 1. Video Layering
-            # Place the motion video on top of the 20s static background.
-            # If the motion video is 5s, it will play once and then disappear, 
-            # but we can loop it or just let the still image remain.
-            # For a hackathon demo, we will just place it at the start.
+            # 1. Video Layering & Looping
+            # Ensure there is constant motion for the full 20 seconds.
+            # If the AI video is 5-8s, we loop it to fill the 20s.
+            if motion_video.duration < 20:
+                loop_count = int(np.ceil(20 / motion_video.duration))
+                motion_video = concatenate_videoclips([motion_video] * loop_count).with_duration(20)
+
             final_video_clip = CompositeVideoClip([bg_image, motion_video.with_position("center")])
             final_video_clip = final_video_clip.with_duration(20)
 

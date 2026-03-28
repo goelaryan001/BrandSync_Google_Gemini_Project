@@ -57,11 +57,22 @@ async def generate_video_mock(image_path: str, style: str, hero_product: str) ->
         
         prompt = f"Make this image move cinematically featuring a {hero_product} in the style of: {style}"
         
-        response = await asyncio.to_thread(
-            client.models.generate_videos,
-            model='veo-3.0-generate-001',
-            prompt=prompt
-        )
+        # 1. Initial Request with Retry for 503s
+        response = None
+        for attempt in range(3):
+            try:
+                response = await asyncio.to_thread(
+                    client.models.generate_videos,
+                    model='veo-3.0-generate-001',
+                    prompt=prompt
+                )
+                break
+            except Exception as e:
+                if "503" in str(e) and attempt < 2:
+                    logger.warning(f"Veo 3: 503 error on initial request, retrying in {2**(attempt+1)}s...")
+                    await asyncio.sleep(2**(attempt+1))
+                else:
+                    raise e
         
         # Poll operation
         operation = response
@@ -72,13 +83,21 @@ async def generate_video_mock(image_path: str, style: str, hero_product: str) ->
         uri = None
         
         while retries < max_retries:
-            op_dict = operation.to_json_dict()
-            if op_dict.get('done') is True:
-                done = True
-                uri = op_dict.get('response', {}).get('generated_videos', [{}])[0].get('video', {}).get('uri')
-                break
-            await asyncio.sleep(5)
-            operation = await asyncio.to_thread(client.operations.get, operation=operation)
+            try:
+                op_dict = operation.to_json_dict()
+                if op_dict.get('done') is True:
+                    done = True
+                    uri = op_dict.get('response', {}).get('generated_videos', [{}])[0].get('video', {}).get('uri')
+                    break
+                await asyncio.sleep(5)
+                # Operation Get with Retry for 503s
+                operation = await asyncio.to_thread(client.operations.get, operation=operation)
+            except Exception as e:
+                if "503" in str(e):
+                    logger.warning("Veo 3: 503 error during polling, retrying in 5s...")
+                    await asyncio.sleep(5)
+                else:
+                    raise e
             retries += 1
             
         if done and uri:
