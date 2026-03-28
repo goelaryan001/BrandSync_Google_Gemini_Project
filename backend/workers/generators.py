@@ -5,6 +5,7 @@ import numpy as np
 from moviepy import ColorClip, AudioArrayClip
 from typing import List
 import aiohttp
+from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
@@ -197,4 +198,37 @@ async def generate_tts_mock(narration: str) -> str:
     except Exception as e:
         logger.error(f"Failed to create TTS: {e}")
 
+    return filepath
+
+async def generate_text_overlay(text: str, index: int) -> str:
+    """Generates a transparent PNG with marketing punchline using Pillow."""
+    logger.info(f"Text Engine: Generating punchline overlay: {text}...")
+    filepath = f"tmp/punchline_overlay_{index}.png"
+    
+    # 1280x720 canvas
+    img = Image.new('RGBA', (1280, 720), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Font handling
+    try:
+        font_path = "/System/Library/Fonts/Supplemental/Arial.ttf"
+        font = ImageFont.truetype(font_path, 80)
+    except:
+        font = ImageFont.load_default(size=60)
+        
+    # Calculate position (center)
+    # Using textbbox for modern Pillow
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (1280 - w) // 2
+    y = (550)  # Lower third
+    
+    # Simple shadow/background rect for readability
+    padding = 20
+    draw.rectangle([x - padding, y - padding, x + w + padding, y + h + padding], fill=(0, 0, 0, 160))
+    
+    # Draw text
+    draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
+    
+    img.save(filepath)
     return filepath

@@ -7,7 +7,8 @@ from backend.workers.generators import (
     generate_images_mock,
     generate_video_mock,
     generate_music_mock,
-    generate_tts_mock
+    generate_tts_mock,
+    generate_text_overlay
 )
 from backend.synthesizer.engine import synthesize_ad
 
@@ -29,6 +30,8 @@ async def process_task(task_id: str, data: dict):
     narrative = style_contract.get("tts_narration", "Welcome.")
     visual_style = style_contract.get("visual_style", "Cinematic")
     hero_product = style_contract.get("hero_product", "Product")
+    punchlines = style_contract.get("ad_punchlines", ["Amazing Brand", "Quality Service", "Check us Out"])
+
 
     # Define parallel tasks
     async def video_pipeline():
@@ -42,16 +45,27 @@ async def process_task(task_id: str, data: dict):
     video_task = asyncio.create_task(video_pipeline())
     audio_task = asyncio.create_task(generate_music_mock(bpm, vibe))
     tts_task = asyncio.create_task(generate_tts_mock(narrative))
+    
+    async def punchline_pipeline():
+        overlay_paths = []
+        for i, text in enumerate(punchlines):
+            path = await generate_text_overlay(text, i)
+            overlay_paths.append(path)
+        return overlay_paths
+    
+    punchline_task = asyncio.create_task(punchline_pipeline())
 
     logger.info("Orchestrator: Waiting for parallel generation to finish...")
-    (video_path, image_path), audio_path, tts_path = await asyncio.gather(video_task, audio_task, tts_task)
+    (video_path, image_path), audio_path, tts_path, overlay_paths = await asyncio.gather(
+        video_task, audio_task, tts_task, punchline_task
+    )
     logger.info("Orchestrator: All GENERATION complete. Starting Synthesis.")
 
     db_client.update_data(f"/tasks/{task_id}", {"status": "synthesizing"})
 
     # Trigger Synthesizer
     try:
-        final_video = await synthesize_ad(task_id, video_path, image_path, audio_path, tts_path)
+        final_video = await synthesize_ad(task_id, video_path, image_path, audio_path, tts_path, overlay_paths)
         logger.info(f"Orchestrator: Synthesis complete: {final_video}")
         db_client.update_data(f"/tasks/{task_id}", {
             "status": "completed",

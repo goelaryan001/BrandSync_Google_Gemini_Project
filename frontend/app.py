@@ -78,8 +78,8 @@ if st.session_state.task_id:
         st.subheader("🎞️ Final Synthesized Ad")
         if st.session_state.status == "completed":
             st.success("Generation Complete!")
-            # Fetch video endpoint
-            video_endpoint = f"{API_BASE_URL}/video/{st.session_state.task_id}"
+            # Fetch video endpoint with cache-buster to force reload
+            video_endpoint = f"{API_BASE_URL}/video/{st.session_state.task_id}?t={time.time()}"
             st.video(video_endpoint)
         elif st.session_state.status == "failed":
             st.error("Generation failed. Please check backend logs.")
