@@ -6,6 +6,9 @@ from moviepy import ColorClip, AudioArrayClip
 from typing import List
 import aiohttp
 from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +48,22 @@ async def generate_images_mock(prompts: List[str]) -> List[str]:
         logger.info("Nano Banana: Done.")
         return filepaths
     except Exception as e:
-        logger.error(f"Image generation failed: {e}. Returning mock.")
-        return [f"tmp/mock_image_{i}.jpg" for i in range(len(prompts))]
+        logger.error(f"Image generation failed: {e}. Generating placeholders.")
+        filepaths = []
+        for i in range(len(prompts)):
+            filepath = f"tmp/nano_banana_image_{i}.png"
+            # Create a placeholder image if AI fails
+            img = Image.new('RGB', (1024, 1024), color=(73, 109, 137))
+            d = ImageDraw.Draw(img)
+            try:
+                # Try to use a system font
+                font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 40)
+            except:
+                font = ImageFont.load_default()
+            d.text((100, 450), f"Image Prompt {i+1}:\n{prompts[i][:50]}...", fill=(255, 255, 0), font=font)
+            img.save(filepath)
+            filepaths.append(filepath)
+        return filepaths
 
 async def generate_video_mock(image_path: str, style: str, hero_product: str) -> str:
     """Generates video using Veo 3.0 based on the image style."""

@@ -302,6 +302,20 @@ else:
             st.success("✨ Generation Complete! Your ad is ready.")
             video_endpoint = f"{API_BASE_URL}/video/{st.session_state.task_id}?t={time.time()}"
             st.video(video_endpoint)
+            
+            # Download Button
+            try:
+                video_res = requests.get(video_endpoint)
+                if video_res.status_code == 200:
+                    st.download_button(
+                        label="📥 Download Video (MP4)",
+                        data=video_res.content,
+                        file_name=f"BrandSync_Ad_{st.session_state.task_id}.mp4",
+                        mime="video/mp4",
+                        use_container_width=True
+                    )
+            except Exception as e:
+                st.warning("Download currently unavailable.")
         elif st.session_state.status == "failed":
             st.error("Generation failed. Please check backend logs.")
         else:
@@ -326,18 +340,11 @@ else:
         with f_col2:
             if st.button("Update & Re-generate 🔄", use_container_width=True):
                 with st.spinner("Processing feedback..."):
-                    patch = {}
-                    if "upbeat" in feedback.lower():
-                        patch["audio_vibe"] = "Upbeat neon"
-                        patch["audio_bpm"] = 140
-                    if "cyberpunk" in feedback.lower():
-                        patch["visual_style"] = "Neon Cyberpunk, glowing, highly detailed"
-                    
-                    if not patch:
-                        patch["visual_style"] = feedback
-                        
                     try:
-                        res = requests.put(f"{API_BASE_URL}/feedback/{st.session_state.task_id}", json=patch)
+                        res = requests.put(
+                            f"{API_BASE_URL}/feedback/{st.session_state.task_id}", 
+                            json={"feedback_text": feedback}
+                        )
                         if res.status_code == 200:
                             st.session_state.status = "pending_generation"
                             st.rerun()

@@ -5,6 +5,9 @@ from typing import Dict, Any, List
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +55,11 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
 
         CRITICAL INSTRUCTIONS:
         1. IDENTIFY THE HERO PRODUCT: Look through the scraped text and identify the core product or service being sold. 
-           (e.g., If the website is a pizza place, the hero_product is 'Pizza'. DO NOT suggest 'Sandwiches' or 'Pasta' unless it's a generic food site). 
         2. VISUAL ACCURACY & BRANDING: All 3 'prompts_for_images' MUST feature this 'hero_product'. 
            - One image prompt MUST be a clean 'Hero shot' that includes 'Integrated professional [Brand Name] logo and minimalist typography'.
         3. DYNAMIC TEXT: Create 3 'ad_punchlines' that capture the brand's core value proposition in exactly 2-3 words each.
         4. PRODUCTION TIMINGS: We are building a **20-second Video Ad**. The 'tts_narration' MUST be exactly 35 words long. NO MORE.
+        5. CREATIVE REFINEMENT: If a 'User Instruction' is provided, treat it as a priority Creative Direction that overrides the original scraping. (e.g., If the user says 'Make it a cartoon', every prompt and vibe MUST reflect high-quality animation).
         
         Input Website Data:
         URL: {scraped_data.get('url')}
@@ -64,7 +67,7 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
         Description: {scraped_data.get('description')}
         Content Snippet: {scraped_data.get('content')[:1500]}
 
-        User Template Preference: {user_template if user_template else 'None (Infer from brand content)'}
+        User Creative Direction: {user_template if user_template else 'None (Infer from brand content)'}
         """
 
         response = client.models.generate_content(
