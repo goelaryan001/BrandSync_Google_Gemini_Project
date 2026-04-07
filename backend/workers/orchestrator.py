@@ -19,7 +19,7 @@ async def process_task(task_id: str, data: dict):
     Orchestrates the parallel generation and the final synthesis.
     """
     logger.info(f"Orchestrator: Processing task {task_id}")
-    db_client.update_data(f"/tasks/{task_id}", {"status": "generating"})
+    db_client.update_data(f"/tasks/{task_id}", {"status": "generating", "progress": 10})
     
     style_contract = data.get("style_contract", {})
     
@@ -55,13 +55,27 @@ async def process_task(task_id: str, data: dict):
     
     punchline_task = asyncio.create_task(punchline_pipeline())
 
+    # Background simulated progress while waiting for high-latency cloud rendering
+    async def progress_simulator():
+        progress = 10
+        try:
+            while progress < 85:
+                await asyncio.sleep(3)
+                progress += 2
+                db_client.update_data(f"/tasks/{task_id}", {"progress": progress})
+        except asyncio.CancelledError:
+            pass
+
+    progress_task = asyncio.create_task(progress_simulator())
+
     logger.info("Orchestrator: Waiting for parallel generation to finish...")
     (video_path, image_paths), audio_path, tts_path, overlay_paths = await asyncio.gather(
         video_task, audio_task, tts_task, punchline_task
     )
+    progress_task.cancel()
     logger.info("Orchestrator: All GENERATION complete. Starting Synthesis.")
 
-    db_client.update_data(f"/tasks/{task_id}", {"status": "synthesizing"})
+    db_client.update_data(f"/tasks/{task_id}", {"status": "synthesizing", "progress": 90})
 
     # Trigger Synthesizer
     try:
@@ -69,7 +83,8 @@ async def process_task(task_id: str, data: dict):
         logger.info(f"Orchestrator: Synthesis complete: {final_video}")
         db_client.update_data(f"/tasks/{task_id}", {
             "status": "completed",
-            "final_video_url": final_video
+            "final_video_url": final_video,
+            "progress": 100
         })
     except Exception as e:
         logger.error(f"Orchestrator: Synthesis failed: {e}")

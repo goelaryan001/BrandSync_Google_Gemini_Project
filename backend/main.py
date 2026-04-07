@@ -25,7 +25,18 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("Shutting down FastAPI...")
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware to allow React frontend to communicate with backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class GenerateRequest(BaseModel):
     url: str

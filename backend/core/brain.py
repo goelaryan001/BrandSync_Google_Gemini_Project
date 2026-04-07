@@ -55,7 +55,7 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
 
         CRITICAL INSTRUCTIONS:
         1. IDENTIFY THE HERO PRODUCT: Look through the scraped text and identify the core product or service being sold. 
-        2. VISUAL ACCURACY & BRANDING: All 3 'prompts_for_images' MUST feature this 'hero_product'. 
+        2. VISUAL ACCURACY & BRANDING: All 3 'prompts_for_images' MUST feature this 'hero_product' and INCORPORATE the brand's 'Scraped Colors' and architectural vibe extracted from 'Scraped Images Context'. If the scraped colors are dull, you may slightly reimagine them to be more vibrant and professional.
            - One image prompt MUST be a clean 'Hero shot' that includes 'Integrated professional [Brand Name] logo and minimalist typography'.
         3. DYNAMIC TEXT: Create 3 'ad_punchlines' that capture the brand's core value proposition in exactly 2-3 words each.
         4. PRODUCTION TIMINGS: We are building a **20-second Video Ad**. The 'tts_narration' MUST be exactly 35 words long. NO MORE.
@@ -65,7 +65,10 @@ def generate_style_contract(scraped_data: Dict[str, str], user_template: str = "
         URL: {scraped_data.get('url')}
         Title: {scraped_data.get('title')}
         Description: {scraped_data.get('description')}
-        Content Snippet: {scraped_data.get('content')[:1500]}
+        Scraped Colors: {scraped_data.get('theme_colors', [])}
+        Scraped Logos: {scraped_data.get('logos', [])}
+        Scraped Images Context: {scraped_data.get('images', [])}
+        Content Snippet: {str(scraped_data.get('content'))[:1500]}
 
         User Creative Direction: {user_template if user_template else 'None (Infer from brand content)'}
         """

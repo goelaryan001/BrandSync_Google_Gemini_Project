@@ -26,6 +26,33 @@ async def scrape_url(url: str) -> dict:
         if meta_tag and "content" in meta_tag.attrs:
             meta_desc = meta_tag["content"]
 
+        # Extract logo (og:image, icon, or generic logo)
+        logos = []
+        og_image = soup.find("meta", property="og:image")
+        if og_image and og_image.get("content"):
+            logos.append(og_image.get("content"))
+            
+        icons = soup.find_all("link", rel=lambda x: x and 'icon' in x.lower())
+        for icon in icons:
+            if icon.get("href"):
+                logos.append(icon.get("href"))
+
+        # Scrape Images (src and alt)
+        images = []
+        for img in soup.find_all("img"):
+            src = img.get("src")
+            alt = img.get("alt", "")
+            if src:
+                images.append({"src": src, "alt": alt})
+                if len(images) >= 10:
+                    break
+                    
+        # Scrape Color Theme
+        theme_colors = []
+        meta_theme = soup.find("meta", attrs={"name": "theme-color"})
+        if meta_theme and meta_theme.get("content"):
+            theme_colors.append(meta_theme.get("content"))
+
         # Extract visible text (basic attempt)
         for script in soup(["script", "style", "nav", "footer"]):
             script.decompose()
@@ -38,13 +65,18 @@ async def scrape_url(url: str) -> dict:
             "url": url,
             "title": title.strip(),
             "description": meta_desc.strip(),
-            "content": text
+            "content": text,
+            "logos": logos,
+            "images": images,
+            "theme_colors": theme_colors
         }
     except Exception as e:
         logger.error(f"Failed to scrape {url}: {e}")
         return {
-            "url": url,
             "title": "Unknown",
             "description": "Failed to scrape description",
-            "content": f"Failed to scrape content due to error: {e}"
+            "content": f"Failed to scrape content due to error: {e}",
+            "logos": [],
+            "images": [],
+            "theme_colors": []
         }

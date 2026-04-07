@@ -174,7 +174,7 @@ async def generate_music_mock(bpm: int, vibe: str) -> str:
         )
         
         # Robust part extraction for Lyria's multimodal response
-        if response.candidates and response.candidates[0].content.parts:
+        if response.candidates and response.candidates[0].content and getattr(response.candidates[0].content, 'parts', None):
             for part in response.candidates[0].content.parts:
                 if hasattr(part, 'inline_data') and part.inline_data:
                     audio_bytes = part.inline_data.data
@@ -220,6 +220,14 @@ async def generate_tts_mock(narration: str) -> str:
             AudioArrayClip(np.column_stack((array, array)), fps=44100).write_audiofile(filepath, logger=None)
     except Exception as e:
         logger.error(f"Failed to create TTS: {e}")
+        # Create silent audio fallback so synthesizer doesn't crash
+        try:
+            duration = 4
+            t = np.linspace(0, duration, int(44100 * duration))
+            array = np.zeros_like(t)
+            AudioArrayClip(np.column_stack((array, array)), fps=44100).write_audiofile(filepath, logger=None)
+        except Exception as fallback_e:
+            logger.error(f"Even TTS fallback failed: {fallback_e}")
 
     return filepath
 
