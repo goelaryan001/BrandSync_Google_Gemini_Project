@@ -13,6 +13,7 @@ function App() {
   const [taskData, setTaskData] = useState(null);
   const [feedback, setFeedback] = useState('');
   const [isHovering, setIsHovering] = useState(false);
+  const [pollingErrorCount, setPollingErrorCount] = useState(0);
 
   useEffect(() => {
     let interval;
@@ -20,12 +21,15 @@ function App() {
       interval = setInterval(async () => {
         try {
           const res = await axios.get(`${API_BASE_URL}/status/${taskId}`);
+          console.log(`Polling task ${taskId}:`, res.data);
           setTaskData(res.data);
           setTaskStatus(res.data.status);
+          setPollingErrorCount(0); // Reset on success
         } catch (error) {
           console.error('Error fetching status', error);
+          setPollingErrorCount(prev => prev + 1);
         }
-      }, 5000);
+      }, taskStatus === 'synthesizing' ? 2500 : 5000);
     }
     return () => clearInterval(interval);
   }, [taskId, taskStatus]);
@@ -38,6 +42,7 @@ function App() {
       setTaskId(res.data.task_id);
       setTaskStatus('pending_generation');
       setTaskData(null);
+      setPollingErrorCount(0);
     } catch (error) {
       console.error('Failed to start generation', error);
       alert('Failed to start generation. Make sure the backend is running.');
@@ -49,6 +54,7 @@ function App() {
     if (!feedback || !taskId) return;
     try {
       setTaskStatus('pending_generation');
+      setTaskData(null); // RESET DATA TO SHOW LOADER
       const res = await axios.put(`${API_BASE_URL}/feedback/${taskId}`, { feedback_text: feedback });
       setFeedback('');
     } catch (error) {
@@ -167,7 +173,7 @@ function App() {
                   <div className="p-4 rounded-xl bg-dark-900 border border-white/5 flex items-center gap-4">
                     {taskStatus === 'completed' ? (
                        <div className="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]" />
-                    ) : taskStatus === 'failed' ? (
+                    ) : (taskStatus === 'failed' && pollingErrorCount < 3) ? (
                        <div className="w-4 h-4 rounded-full bg-red-500 shadow-[0_0_10px_#ef4444]" />
                     ) : (
                       <div className="w-4 h-4 rounded-full bg-brand-neon shadow-[0_0_10px_#00f0ff] animate-pulse-slow" />
@@ -240,11 +246,11 @@ function App() {
                          controls 
                          autoPlay
                          className="w-full max-h-[500px] rounded-lg shadow-2xl bg-black"
-                         src={`${API_BASE_URL}/video/${taskId}`}
+                         src={`${API_BASE_URL}/video/${taskId}?t=${Date.now()}`}
                        />
                        <div className="mt-6 w-full flex justify-end">
                          <a 
-                           href={`${API_BASE_URL}/video/${taskId}`}
+                           href={`${API_BASE_URL}/video/${taskId}?t=${Date.now()}`}
                            download="BrandSync_Ad.mp4"
                            className="flex items-center gap-2 bg-dark-800 border border-white/10 hover:border-brand-neon text-gray-200 px-5 py-2.5 rounded-lg transition-all"
                          >
@@ -253,10 +259,21 @@ function App() {
                          </a>
                        </div>
                     </motion.div>
-                  ) : taskStatus === 'failed' ? (
+                  ) : (taskStatus === 'failed' && pollingErrorCount < 3) ? (
                      <div className="w-full h-full flex items-center justify-center text-red-400 p-8 text-center bg-dark-900 rounded-xl">
-                        Generation Failed. Check backend logs for details.
+                        {taskData?.error?.toLowerCase().includes("interpreter shutdown") || taskData?.error?.toLowerCase().includes("new futures") ? (
+                           <div className="flex flex-col items-center gap-2">
+                             <div className="text-amber-400">Restoring Connection to Studio...</div>
+                             <div className="text-sm opacity-50">Backend restarted during generation. Retrying.</div>
+                           </div>
+                        ) : (
+                           `Generation Failed: ${taskData?.error || 'Unknown error occurred.'} Check backend logs for details.`
+                        )}
                      </div>
+                  ) : pollingErrorCount >= 3 ? (
+                    <div className="w-full h-full flex items-center justify-center text-amber-400 p-8 text-center bg-dark-900 rounded-xl">
+                       Connecting to Studio... (Network is being stubborn)
+                    </div>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-12 text-center bg-dark-900 rounded-xl border border-white/5 relative overflow-hidden">
                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/micro-grid.png')] opacity-5 mix-blend-overlay" />

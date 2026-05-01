@@ -10,8 +10,13 @@ async def scrape_url(url: str) -> dict:
     """
     logger.info(f"Scraping URL: {url}")
     try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-            async with session.get(url, timeout=10) as response:
+            async with session.get(url, timeout=15, headers=headers) as response:
                 response.raise_for_status()
                 html = await response.text()
 
